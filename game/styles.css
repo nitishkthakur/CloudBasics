@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap');
+:root{
+  --bg:#04070e;
+  --ui:#0c1424cc;
+  --panel:#0b1321f0;
+  --accent:#46d3ff;
+  --accent-2:#ffcb3b;
+  --danger:#ff5577;
+  --ok:#4cd964;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:radial-gradient(100% 100% at 50% 0%, #0b1222 0%, #02040a 100%);color:#e8f0ff;font-family:"Rajdhani",system-ui,Segoe UI,Roboto,Arial,sans-serif}
+#game{display:block;width:100vw;height:100vh;background:linear-gradient(#02040a,#01020a);cursor:crosshair}
+#ui{position:fixed;left:0;right:0;top:0;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;pointer-events:none;z-index:5}
+#ui .stat{display:flex;align-items:center;gap:8px;margin-right:12px;background:var(--ui);padding:6px 10px;border-radius:8px;box-shadow:0 4px 10px #0006;border:1px solid #1a2645}
+#ui .stat span{opacity:.8}
+#ui strong{font-size:20px;letter-spacing:.5px}
+#ui .left,.right{display:flex;gap:10px;align-items:center}
+#hpbar{width:160px;height:14px;border:1px solid #2c3c66;border-radius:999px;overflow:hidden;background:#061028}
+#hpbar-fill{height:100%;width:100%;background:linear-gradient(90deg,var(--ok),#9be15a);box-shadow:0 0 10px #6f6;transition:width .2s linear}
+#ui button{pointer-events:auto;background:var(--ui);border:1px solid #223158;color:#e6f2ff;border-radius:8px;padding:6px 10px;cursor:pointer;box-shadow:0 4px 10px #0006}
+#ui button:hover{border-color:#345099;filter:brightness(1.1)}
+#ui button:active{transform:translateY(1px)}
+
+#overlay,#gameOver{position:fixed;inset:0;display:grid;place-items:center;background:linear-gradient(180deg,#00000080,#000000cc);backdrop-filter:blur(2px);z-index:10}
+#overlay.hidden,#gameOver.hidden{display:none}
+#overlay.visible{display:grid}
+.panel{background:var(--panel);border:1px solid #1f2e54;border-radius:16px;box-shadow:0 10px 30px #0008;padding:24px 28px;max-width:680px;width:min(92vw,680px);text-align:center}
+.panel h1{margin:0 0 8px 0;font-size:42px;letter-spacing:1px;color:#e9f3ff;text-shadow:0 2px 10px #000}
+.panel h2{margin:0 0 6px 0;font-size:32px}
+.subtitle{opacity:.85;margin:0 0 14px 0}
+.buttons{display:flex;gap:12px;justify-content:center;margin-top:10px}
+button.primary{background:linear-gradient(180deg,#1a6cff,#0f4fd6);border-color:#3d70ff;color:#fff}
+button.primary:hover{filter:brightness(1.1)}
+#how.hidden{display:none}
+#how ul{margin:10px auto 0 auto;opacity:.9;text-align:left;max-width:540px}
+#how li{margin:6px 0}
+
+/* Stars parallax for body background */
+body::before, body::after{
+  content:"";position:fixed;inset:-10px;pointer-events:none;z-index:0;opacity:.7
+}
+body::before{background:radial-gradient(1px 1px at 20% 10%,#6cf 99%,#0000),radial-gradient(1px 1px at 40% 30%,#9bf 99%,#0000),radial-gradient(1px 1px at 60% 70%,#bdf 99%,#0000),radial-gradient(1px 1px at 80% 50%,#cfe 99%,#0000),radial-gradient(2px 2px at 10% 80%,#fff 99%,#0000),radial-gradient(2px 2px at 70% 20%,#def 99%,#0000);animation:stars1 80s linear infinite}
+body::after{background:radial-gradient(1px 1px at 25% 60%,#fff 99%,#0000),radial-gradient(1px 1px at 55% 20%,#adf 99%,#0000),radial-gradient(1px 1px at 75% 40%,#cfe 99%,#0000),radial-gradient(2px 2px at 90% 30%,#9cf 99%,#0000),radial-gradient(2px 2px at 30% 80%,#eef 99%,#0000);animation:stars2 120s linear infinite}
+@keyframes stars1{from{transform:translateY(0)}to{transform:translateY(1000px)}}
+@keyframes stars2{from{transform:translateY(0)}to{transform:translateY(1400px)}}
+
+/* Mobile helpers */
+@media (max-width: 700px){
+  #hpbar{width:120px}
+  #ui strong{font-size:18px}
+  .panel{padding:20px}
+}

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Airplane Shooter</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="ui">
+    <div class="left">
+      <div class="stat"><span>Score</span><strong id="score">0</strong></div>
+      <div class="stat"><span>Level</span><strong id="level">1</strong></div>
+    </div>
+    <div class="right">
+      <div class="stat"><span>Health</span>
+        <div id="hpbar"><div id="hpbar-fill"></div></div>
+      </div>
+      <button id="pauseBtn" title="Pause (P)">⏸</button>
+      <button id="muteBtn" title="Mute (M)">🔈</button>
+    </div>
+  </div>
+
+  <canvas id="game"></canvas>
+
+  <div id="overlay" class="visible">
+    <div class="panel">
+      <h1>Airplane Shooter</h1>
+      <p class="subtitle">WASD/Arrows to move • Space/Click to fire • P to pause</p>
+      <div class="buttons">
+        <button id="startBtn" class="primary">Start</button>
+        <button id="howBtn">How to Play</button>
+      </div>
+      <div id="how" class="hidden">
+        <ul>
+          <li>Move with WASD or Arrow Keys.</li>
+          <li>Hold Spacebar or press/hold mouse/touch to fire.</li>
+          <li>Collect power-ups: Rapid Fire, Spread, Shield, and Repair.</li>
+          <li>Survive waves, defeat elites and bosses, and chase high score!</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div id="gameOver" class="hidden">
+    <div class="panel">
+      <h2>Game Over</h2>
+      <p>Your Score: <strong id="finalScore">0</strong></p>
+      <div class="buttons">
+        <button id="restartBtn" class="primary">Restart</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
