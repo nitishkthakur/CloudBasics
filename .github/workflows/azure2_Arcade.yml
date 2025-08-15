@@ -1,44 +1,47 @@
-name: Arcade CI
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+# More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
+
+name: Build and deploy Python app to Azure Web App - Arcade
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-
-permissions:
-  contents: read
+    branches:
+      - azure2
+  workflow_dispatch:
 
 jobs:
-  ci:
-    name: Build and smoke test
+  build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    permissions:
+      contents: read #This is required for actions/checkout
 
-      - name: Set up Python
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python version
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
+
+      - name: Create and start virtual environment
+        run: |
+          python -m venv venv
+          source venv/bin/activate
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
-      - name: Start app
+      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
+      - name: Start app for smoke test
         env:
           # Cosmos vars intentionally left empty for CI; index route does not require them
           COSMOS_ENDPOINT: ''
           COSMOS_KEY: ''
         run: |
-          cd game
+          source venv/bin/activate
           nohup uvicorn shooter:app --host 127.0.0.1 --port 8000 >/dev/null 2>&1 &
-          echo $! > ../uvicorn.pid
+          echo $! > uvicorn.pid
 
       - name: Wait for server
         run: |
@@ -60,30 +63,37 @@ jobs:
         run: |
           if [ -f uvicorn.pid ]; then kill $(cat uvicorn.pid) || true; fi
 
-      - name: Upload game artifact
+      - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
-          name: arcade-game
+          name: python-app
           path: |
-            game/index.html
-            game/styles.css
-            game/script.js
-            game/assets/**
-            game/shooter.py
-            requirements.txt
+            .
+            !venv/
 
-  # Optional deploy stage for Azure Web App (uncomment and configure secrets to enable)
-  # Note: The main application files are in the /game directory, but requirements.txt is in root
-  # Consider this structure when configuring the deployment
-  # deploy:
-  #   needs: ci
-  #   runs-on: ubuntu-latest
-  #   if: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE != '' && vars.AZURE_WEBAPP_NAME != '' }}
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Deploy to Azure Web App
-  #       uses: azure/webapps-deploy@v3
-  #       with:
-  #         app-name: ${{ vars.AZURE_WEBAPP_NAME }}
-  #         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-  #         package: .
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: python-app
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.__clientidsecretname__ }}
+          tenant-id: ${{ secrets.__tenantidsecretname__ }}
+          subscription-id: ${{ secrets.__subscriptionidsecretname__ }}
+
+      - name: 'Deploy to Azure Web App'
+        uses: azure/webapps-deploy@v3
+        id: deploy-to-webapp
+        with:
+          app-name: 'Arcade'
+          slot-name: 'Production'
