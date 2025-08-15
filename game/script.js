@@ -5,6 +5,15 @@
   // Canvas setup
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
+  // Enable image smoothing for scaled sprites
+  ctx.imageSmoothingEnabled = true;
+
+  // Load player plane image
+  const planeImg = new Image();
+  let planeReady = false;
+  planeImg.onload = () => { planeReady = true; };
+  planeImg.src = 'assets/plane1.png';
+
   let vw = 0, vh = 0, dpr = 1;
   function resize() {
     dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -325,20 +334,23 @@
     draw() {
       ctx.save();
       ctx.translate(this.x, this.y);
-      // Thruster glow
+      // Thruster glow behind the sprite
       const thr = Math.sin(perf * 15) * 2 + 6;
       ctx.fillStyle = '#3cf8';
       ctx.beginPath(); ctx.moveTo(-6, this.h / 2); ctx.lineTo(0, this.h / 2 + thr); ctx.lineTo(6, this.h / 2); ctx.closePath(); ctx.fill();
-      // Body
-      const g = ctx.createLinearGradient(0, -this.h / 2, 0, this.h / 2);
-      g.addColorStop(0, '#4fa3ff'); g.addColorStop(1, '#1a3f86');
-      ctx.fillStyle = g;
-      roundRect(-this.w / 2, -this.h / 2, this.w, this.h, 10, true, true);
-      // Cockpit
-      ctx.fillStyle = '#aef'; ctx.beginPath(); ctx.ellipse(0, -6, 10, 6, 0, 0, Math.PI * 2); ctx.fill();
-      // Wings
-      ctx.fillStyle = '#2a58aa'; ctx.fillRect(-this.w / 2 - 8, -4, this.w + 16, 8);
-      // Shield
+
+      // Draw plane sprite centered, resized to current player size
+      if (planeReady) {
+        ctx.drawImage(planeImg, -this.w / 2, -this.h / 2, this.w, this.h);
+      } else {
+        // Fallback simple shape until image loads
+        const g = ctx.createLinearGradient(0, -this.h / 2, 0, this.h / 2);
+        g.addColorStop(0, '#4fa3ff'); g.addColorStop(1, '#1a3f86');
+        ctx.fillStyle = g;
+        roundRect(-this.w / 2, -this.h / 2, this.w, this.h, 10, true, true);
+      }
+
+      // Shield effect overlay
       if (this.shield > 0) {
         ctx.strokeStyle = `rgba(70,211,255,${0.5 + 0.5 * Math.sin(perf * 6)})`;
         ctx.lineWidth = 2;
