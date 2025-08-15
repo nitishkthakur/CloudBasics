@@ -1,0 +1,86 @@
+name: Arcade CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Build and smoke test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Start app
+        env:
+          # Cosmos vars intentionally left empty for CI; index route does not require them
+          COSMOS_ENDPOINT: ''
+          COSMOS_KEY: ''
+        run: |
+          nohup uvicorn shooter:app --host 127.0.0.1 --port 8000 >/dev/null 2>&1 &
+          echo $! > uvicorn.pid
+
+      - name: Wait for server
+        run: |
+          for i in {1..20}; do
+            if curl -sSf http://127.0.0.1:8000/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo 'Server did not start' >&2
+          exit 1
+
+      - name: Smoke test index
+        run: |
+          curl -fS http://127.0.0.1:8000/ | grep -i "Airplane Shooter"
+
+      - name: Stop app
+        if: always()
+        run: |
+          if [ -f uvicorn.pid ]; then kill $(cat uvicorn.pid) || true; fi
+
+      - name: Upload game artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: arcade-game
+          path: |
+            index.html
+            styles.css
+            script.js
+            assets/**
+            shooter.py
+            requirements.txt
+
+  # Optional deploy stage for Azure Web App (uncomment and configure secrets to enable)
+  # deploy:
+  #   needs: ci
+  #   runs-on: ubuntu-latest
+  #   if: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE != '' && vars.AZURE_WEBAPP_NAME != '' }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Deploy to Azure Web App
+  #       uses: azure/webapps-deploy@v3
+  #       with:
+  #         app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+  #         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+  #         package: .

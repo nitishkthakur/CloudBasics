@@ -398,6 +398,11 @@
   let levelTransitionPending = false; // message showing
   let levelTransitionDone = false;    // completed once
   let levelMsgTimer = 0;              // seconds remaining for message
+<<<<<<< HEAD
+=======
+  // Score submit guard
+  let scorePosted = false;
+>>>>>>> bbc2850 (fic)
   let player = null;
   const enemies = []; const bullets = []; const particles = []; const powerups = [];
 
@@ -417,6 +422,10 @@
     started = true; gameOver = false; paused = false;
     score = 0; level = 1; lastSpawn = 0; timeSinceStart = 0; perf = 0;
     levelTransitionPending = false; levelTransitionDone = false; levelMsgTimer = 0;
+<<<<<<< HEAD
+=======
+    scorePosted = false;
+>>>>>>> bbc2850 (fic)
     bgOffset = 0;
     player = new Player();
     enemies.length = 0; bullets.length = 0; particles.length = 0; powerups.length = 0;
@@ -432,6 +441,11 @@
     gameOver = true;
     finalScoreEl.textContent = String(score);
     gameOverEl.classList.remove('hidden');
+    // Submit score to backend once
+    if (!scorePosted) {
+      scorePosted = true;
+      postScore(score).catch(() => {});
+    }
   }
 
   startBtn?.addEventListener('click', startGame);
