@@ -36,8 +36,9 @@ jobs:
           COSMOS_ENDPOINT: ''
           COSMOS_KEY: ''
         run: |
+          cd game
           nohup uvicorn shooter:app --host 127.0.0.1 --port 8000 >/dev/null 2>&1 &
-          echo $! > uvicorn.pid
+          echo $! > ../uvicorn.pid
 
       - name: Wait for server
         run: |
@@ -64,14 +65,16 @@ jobs:
         with:
           name: arcade-game
           path: |
-            index.html
-            styles.css
-            script.js
-            assets/**
-            shooter.py
+            game/index.html
+            game/styles.css
+            game/script.js
+            game/assets/**
+            game/shooter.py
             requirements.txt
 
   # Optional deploy stage for Azure Web App (uncomment and configure secrets to enable)
+  # Note: The main application files are in the /game directory, but requirements.txt is in root
+  # Consider this structure when configuring the deployment
   # deploy:
   #   needs: ci
   #   runs-on: ubuntu-latest
