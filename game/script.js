@@ -8,11 +8,20 @@
   // Enable image smoothing for scaled sprites
   ctx.imageSmoothingEnabled = true;
 
-  // Load player plane image
-  const planeImg = new Image();
-  let planeReady = false;
-  planeImg.onload = () => { planeReady = true; };
-  planeImg.src = 'assets/plane1.png';
+  // Asset loading (level-based planes and backgrounds)
+  function loadImage(src) { const img = new Image(); img.src = src; return img; }
+  const assets = {
+    planes: {
+      1: loadImage('assets/level_1_plane.png'),
+      2: loadImage('assets/level_2_plane.png'),
+    },
+    bgs: {
+      1: loadImage('assets/level_1_background.png'),
+      2: loadImage('assets/level_2_background.png'),
+    }
+  };
+  function currentPlaneImg() { return assets.planes[level] || assets.planes[1]; }
+  function currentBgImg() { return assets.bgs[level] || assets.bgs[1]; }
 
   let vw = 0, vh = 0, dpr = 1;
   function resize() {
@@ -133,22 +142,6 @@
     pauseBtn.textContent = paused ? '▶' : '⏸';
     if (!paused) lastTime = performance.now();
   }
-
-  // Starfield background
-  const stars = [];
-  function resetStars() {
-    stars.length = 0;
-    for (let i = 0; i < 200; i++) {
-      stars.push({
-        x: Math.random() * vw,
-        y: Math.random() * vh,
-        size: Math.random() * 2 + 0.5,
-        speed: Math.random() * 30 + 20,
-        hue: 200 + Math.random() * 40,
-      });
-    }
-  }
-  resetStars();
 
   // Entities
   class Entity {
@@ -339,11 +332,12 @@
       ctx.fillStyle = '#3cf8';
       ctx.beginPath(); ctx.moveTo(-6, this.h / 2); ctx.lineTo(0, this.h / 2 + thr); ctx.lineTo(6, this.h / 2); ctx.closePath(); ctx.fill();
 
-      // Draw plane sprite centered, resized to current player size
-      if (planeReady) {
-        ctx.drawImage(planeImg, -this.w / 2, -this.h / 2, this.w, this.h);
+      // Draw plane sprite for current level
+      const img = currentPlaneImg();
+      if (img && img.complete && img.naturalWidth) {
+        ctx.drawImage(img, -this.w / 2, -this.h / 2, this.w, this.h);
       } else {
-        // Fallback simple shape until image loads
+        // Fallback shape until image loads
         const g = ctx.createLinearGradient(0, -this.h / 2, 0, this.h / 2);
         g.addColorStop(0, '#4fa3ff'); g.addColorStop(1, '#1a3f86');
         ctx.fillStyle = g;
@@ -400,6 +394,10 @@
   let gameOver = false;
   let paused = false;
   let score = 0; let level = 1;
+  // Level transition state
+  let levelTransitionPending = false; // message showing
+  let levelTransitionDone = false;    // completed once
+  let levelMsgTimer = 0;              // seconds remaining for message
   let player = null;
   const enemies = []; const bullets = []; const particles = []; const powerups = [];
 
@@ -418,9 +416,11 @@
     initAudio();
     started = true; gameOver = false; paused = false;
     score = 0; level = 1; lastSpawn = 0; timeSinceStart = 0; perf = 0;
+    levelTransitionPending = false; levelTransitionDone = false; levelMsgTimer = 0;
+    bgOffset = 0;
     player = new Player();
     enemies.length = 0; bullets.length = 0; particles.length = 0; powerups.length = 0;
-    resetStars();
+    // resetStars(); // not used with image background
     overlay.classList.remove('visible');
     overlay.classList.add('hidden');
     gameOverEl.classList.add('hidden');
@@ -452,8 +452,11 @@
       if (r > 0.93) type = 'elite';
       enemies.push(new Enemy(x, -30, type));
     }
-    // Increase level slowly
-    if (Math.floor(timeSinceStart / 20) + 1 > level) level++;
+    // Level 1 -> Level 2 transition trigger after 15s
+    if (level === 1 && !levelTransitionPending && !levelTransitionDone && timeSinceStart >= 15) {
+      levelTransitionPending = true;
+      levelMsgTimer = 5; // show message for 5 seconds
+    }
   }
 
   // Power-up pickup effects
@@ -487,12 +490,8 @@
     const dt = Math.min(0.033, (ts - lastTime) / 1000 || 0.016);
     lastTime = ts; perf += dt;
 
-    // Update stars
-    const starSpeed = 60 + level * 6;
-    for (const s of stars) {
-      s.y += (s.speed + starSpeed) * dt;
-      if (s.y > vh) { s.y = 0; s.x = Math.random() * vw; s.size = Math.random() * 2 + 0.5; }
-    }
+    // Update background scroll (replaces starfield update)
+    updateBackground(dt);
 
     // Spawns
     doSpawns(dt);
@@ -516,6 +515,16 @@
     // Power-ups -> player
     for (const u of powerups) if (player && aabb(u, player)) { u.alive = false; applyPowerUp(u.kind); }
 
+    // Handle level transition timing
+    if (levelTransitionPending) {
+      levelMsgTimer -= dt;
+      if (levelMsgTimer <= 0) {
+        levelTransitionPending = false;
+        levelTransitionDone = true;
+        level = 2; // advance to level 2 after the message
+      }
+    }
+
     // Cleanup
     cleanup(enemies); cleanup(bullets); cleanup(particles); cleanup(powerups);
 
@@ -528,6 +537,19 @@
     player?.draw();
     for (const p of particles) p.draw();
 
+    // Level message overlay (top)
+    if (levelTransitionPending) {
+      ctx.save();
+      ctx.globalAlpha = 0.95;
+      ctx.font = 'bold 28px Rajdhani, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#000';
+      ctx.shadowBlur = 12;
+      ctx.fillText('Level 1 complete!', vw / 2, 48);
+      ctx.restore();
+    }
+
     // UI update
     setUi();
 
@@ -536,15 +558,33 @@
 
   function cleanup(arr) { for (let i = arr.length - 1; i >= 0; i--) if (!arr[i].alive || arr[i].y < -1000 || arr[i].y > vh + 1000) arr.splice(i, 1); }
 
+  // Scrolling background (image-based)
+  let bgOffset = 0;
+  function getBgDrawHeight() {
+    const img = currentBgImg();
+    if (!img || !img.complete || !img.naturalWidth) return vh;
+    const scale = vw / img.naturalWidth;
+    return img.naturalHeight * scale;
+  }
+  function updateBackground(dt) {
+    const speed = 60 + level * 15;
+    bgOffset = (bgOffset + speed * dt) % Math.max(1, getBgDrawHeight());
+  }
+
   function drawBackground() {
-    // gradient sky
-    const g = ctx.createLinearGradient(0, 0, 0, vh);
-    g.addColorStop(0, '#050a18'); g.addColorStop(1, '#01030a');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, vw, vh);
-    // stars
-    for (const s of stars) {
-      ctx.fillStyle = `hsla(${s.hue},80%,70%,0.9)`;
-      ctx.fillRect(s.x, s.y, s.size, s.size);
+    const img = currentBgImg();
+    if (img && img.complete && img.naturalWidth) {
+      const scale = vw / img.naturalWidth;
+      const drawH = img.naturalHeight * scale;
+      let y = -bgOffset;
+      while (y < vh) {
+        ctx.drawImage(img, 0, Math.floor(y), Math.floor(vw), Math.floor(drawH));
+        y += drawH;
+      }
+    } else {
+      // Fallback solid color until image loads
+      ctx.fillStyle = '#050a18';
+      ctx.fillRect(0, 0, vw, vh);
     }
   }
 
